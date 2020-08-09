@@ -1,6 +1,11 @@
 #include "esphome.h"
 
-#define DELAY_MS 30000 // Delay in miliseconds between readings
+#define DELAY_MS 15000 // Delay in miliseconds between readings
+#define VNOX_PIN A0
+#define VRED_PIN A0
+#define PRE_PIN D6
+#define MUX_PIN D5
+
 
 class MICS4514 : public PollingComponent {
  public:
@@ -11,25 +16,42 @@ class MICS4514 : public PollingComponent {
   MICS4514() : PollingComponent(DELAY_MS) {}
 
   void setup() override {
+    // Initilize multiplexer in
+    pinMode(MUX_PIN, OUTPUT);
+    
     // Setup preheater pin
-    pinMode(D6, OUTPUT);
+    pinMode(PRE_PIN, OUTPUT);
 
     // Wait for preheating
-    digitalWrite(D6, 1);
+    digitalWrite(PRE_PIN, 1);
+    
+    // Preheat for 1 second
     delay(10 * 1000);
-    digitalWrite(D6, 0);
+    
+    // Stop preheating
+    digitalWrite(PRE_PIN, 0);
   }
   
   void update() override {
     // This will be called every "DELAY_MS" milliseconds.
     
-    // Read analog values, print them out, and wait
-    digitalWrite(D5, LOW);
-    float vnox_value = ADCavg(A0);
-    delay(10);
-    digitalWrite(D5, HIGH);
-    float vred_value = ADCavg(A0);
+    // Prepare multiplexer for NO2 reading
+    digitalWrite(MUX_PIN, LOW);
     
+    // Read analog value for NO2
+    float vnox_value = ADCavg(VNOX_PIN);
+    //float vnox_value = analogRead(VNOX_PIN);
+    
+    delay(10);
+    
+    // Prepare multiplexer for CO reading
+    digitalWrite(MUX_PIN, HIGH);
+    
+    // Read analog value for CO
+    float vred_value = ADCavg(VRED_PIN);
+    //float vred_value = analogRead(VRED_PIN);
+    
+    // Publish readings
     no2_sensor->publish_state(vnox_value);
     co_sensor->publish_state(vred_value);
     
